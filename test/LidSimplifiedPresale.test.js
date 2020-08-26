@@ -175,6 +175,7 @@ describe("LidSimplifiedPresale", function() {
         );
       });
     });
+    // Todo: Isaac, resolve the out of gas error
     // describe("#deposit", function() {
     //   it("should not allow more than nonWhitelisted max buy if not on whitelist.", async function() {
     //     const result = await this.Presale.deposit({
