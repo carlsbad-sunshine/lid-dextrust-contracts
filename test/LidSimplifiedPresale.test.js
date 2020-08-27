@@ -35,8 +35,8 @@ const initialTokenHolder = accounts[8];
 const TOTAL_TOKENS = ether("100000000");
 const SECONDS_PER_HOUR = 3600;
 
-describe("LidSimplifiedPresale", function () {
-  before(async function () {
+describe("LidSimplifiedPresale", function() {
+  before(async function() {
     this.Token = await Token.new();
     this.TeamLock = await TeamLock.new();
     this.DaoLock = await DaoLock.new();
@@ -83,9 +83,9 @@ describe("LidSimplifiedPresale", function () {
     );
   });
 
-  describe("Stateless", function () {
-    describe("setWhitelist", async function () {
-      it("should revert for non-owner", async function () {
+  describe("Stateless", function() {
+    describe("setWhitelist", async function() {
+      it("should revert for non-owner", async function() {
         await expectRevert(
           this.Presale.setWhitelist(depositors[0], true, {
             from: depositors[0],
@@ -94,7 +94,7 @@ describe("LidSimplifiedPresale", function () {
         );
       });
 
-      it("should whitelist non whitelisted account", async function () {
+      it("should whitelist non whitelisted account", async function() {
         const whitelist = await this.Presale.whitelist(depositors[0]);
         await this.Presale.setWhitelist(depositors[0], true, {
           from: owner,
@@ -102,7 +102,7 @@ describe("LidSimplifiedPresale", function () {
         expect(whitelist).to.equal(false);
         expect(await this.Presale.whitelist(depositors[0])).to.equal(true);
       });
-      it("should unwhitelist account", async function () {
+      it("should unwhitelist account", async function() {
         const whitelist = await this.Presale.whitelist(depositors[0]);
         await this.Presale.setWhitelist(depositors[0], false, {
           from: owner,
@@ -111,22 +111,40 @@ describe("LidSimplifiedPresale", function () {
         expect(await this.Presale.whitelist(depositors[0])).to.equal(false);
       });
     });
+
+    describe("#setWhitelistForAll", function() {
+      it("should whitelist all addresses", async function() {
+        await this.Presale.setWhitelistForAll(depositors, true, {
+          from: owner,
+        });
+        let whitelistVals = await Promise.all(
+          depositors.map((depositor) => {
+            return this.Presale.whitelist(depositor);
+          })
+        );
+        expect(
+          whitelistVals.reduce((acc, val) => {
+            return acc && val;
+          })
+        ).to.equal(true);
+      });
+    });
   });
 
-  describe("State: Before Presale Start", function () {
-    before(async function () {
+  describe("State: Before Presale Start", function() {
+    before(async function() {
       const startTime = await this.Timer.startTime();
     });
-    describe("#deposit", function () {
-      it("Should revert", async function () {
+    describe("#deposit", function() {
+      it("should revert", async function() {
         await expectRevert(
           this.Presale.deposit({ from: depositors[0] }),
           "Presale not yet started."
         );
       });
     });
-    describe("#sendToUniswap", function () {
-      it("Should revert", async function () {
+    describe("#sendToUniswap", function() {
+      it("should revert", async function() {
         await expectRevert(
           this.Presale.sendToUniswap({ from: depositors[0] }),
           "Presale not yet started."
@@ -135,8 +153,8 @@ describe("LidSimplifiedPresale", function () {
     });
   });
 
-  describe("State: Presale Ended", function () {
-    before(async function () {
+  describe("State: Presale Active", function() {
+    before(async function() {
       await this.Timer.initialize(
         config.timer.startTime,
         config.timer.hardCapTimer,
@@ -149,8 +167,105 @@ describe("LidSimplifiedPresale", function () {
         { from: owner }
       );
     });
-    describe("#deposit", function () {
-      it("should revert", async function () {
+    describe("#sendToUniswap", function() {
+      it("should revert", async function() {
+        await expectRevert(
+          this.Presale.sendToUniswap({ from: depositors[0] }),
+          "Presale has not yet ended."
+        );
+      });
+    });
+    // Todo: Isaac, resolve the out of gas error
+    // describe("#deposit", function() {
+    //   it("should not allow more than nonWhitelisted max buy if not on whitelist.", async function() {
+    //     const result = await this.Presale.deposit({
+    //       from: accounts[5],
+    //       value: config.presale.maxBuyWithoutWhitelisting.add(new BN(20)),
+    //     });
+    //     await expectRevert(
+    //       result,
+    //       "Deposit exceeds max buy per address for non-whitelisted addresses."
+    //     );
+    //   });
+    //   it("should revert if buy higher than max", async function() {
+    //     const totalDeposit = await web3.eth.getBalance(this.Presale.address);
+    //     const max = new BN(
+    //       await this.Presale.getMaxWhitelistedDeposit(totalDeposit)
+    //     );
+
+    //     await expectRevert(
+    //       this.Presale.deposit({
+    //         from: depositors[0],
+    //         value: max.add(new BN(1)),
+    //       }),
+    //       "Deposit exceeds max buy per address for whitelisted addresses."
+    //     );
+    //     await expectRevert(
+    //       this.Presale.deposit({
+    //         from: depositors[0],
+    //         value: max.add(ether("1")),
+    //       }),
+    //       "Deposit exceeds max buy per address for whitelisted addresses."
+    //     );
+    //   });
+    //   describe("On buyer1 success", function() {
+    //     before(async function() {
+    //       this.Presale.deposit({
+    //         from: depositors[0],
+    //         value: config.presale.maxBuyPerAddress,
+    //       });
+    //     });
+    //   });
+    //   describe("On buyer2 success", function() {
+    //     before(async function() {
+    //       this.Presale.deposit({
+    //         from: depositors[1],
+    //         value: config.presale.maxBuyPerAddress,
+    //       });
+    //     });
+    //   });
+    //   describe("On final buyer attempts", function() {
+    //     it("should revert if greater than max", async function() {
+    //       const totalDeposit = await web3.eth.getBalance(this.Presale.address);
+    //       const max = new BN(
+    //         await this.Presale.getMaxWhitelistedDeposit(totalDeposit)
+    //       );
+
+    //       await expectRevert(
+    //         this.Presale.deposit({
+    //           from: depositors[2],
+    //           value: max.add(new BN(1)),
+    //         }),
+    //         "Deposit exceeds max buy per address for whitelisted addresses."
+    //       );
+    //     });
+    //     it("should revert if time is after endtime.", async function() {
+    //       const totalDeposit = await web3.eth.getBalance(this.Presale.address);
+    //       const max = new BN(
+    //         await this.Presale.getMaxWhitelistedDeposit(totalDeposit)
+    //       );
+    //       await this.Timer.setEndTime(new Date.now(), { from: owner });
+
+    //       const result = await this.Presale.deposit({
+    //         from: depositors[2],
+    //         value: max,
+    //       });
+
+    //       await expectRevert(result, "Presale has ended.");
+    //     });
+    //   });
+    // });
+  });
+
+  describe("State: Presale Ended", function() {
+    before(async function() {
+      await this.Timer.setStartTime(
+        (Math.floor(Date.now() / 1000) - 60).toString(),
+        { from: owner }
+      );
+    });
+    describe("#deposit", function() {
+      it("should revert", async function() {
         const result = await this.Presale.deposit({ from: depositors[0] });
         expectRevert(result, "Presale has ended.");
       });
